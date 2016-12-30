@@ -1,4 +1,7 @@
 - execute command and display result
+- pretty-print response JSON
+- up arrow
+- delete and arrow keys
 - command body
 - error handling when parsing
 - limit http methods
