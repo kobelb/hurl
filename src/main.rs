@@ -14,6 +14,12 @@ struct Command {
   path: String
 }
 
+struct ServerConfig {
+  url: String,
+  username: Option<String>,
+  password: Option<String>
+}
+
 impl fmt::Display for Command {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f, "method: {}, path: {}", self.method, self.path)
@@ -21,9 +27,15 @@ impl fmt::Display for Command {
 }
 
 fn main() {
+  let server_config = ServerConfig {
+    url: "http://localhost:9200".to_string(),
+    username: None,
+    password: None
+  };
+
   loop {
     match read() {
-      Ok(c) => { evaluate(c) }
+      Ok(command) => { evaluate(&server_config, &command) }
       Err(err) => { println!("Unable to parse command: {}", err) }
     }
   }
@@ -46,10 +58,21 @@ fn parse(text: String) -> Result<Command, Box<Error>> {
   )
 }
 
-fn evaluate(command: Command) {
+fn evaluate(server_config: &ServerConfig, command: &Command) {
   let mut easy = Easy::new();
-  let url = Url::parse("http://localhost:9200").unwrap();
+  let url = Url::parse(&server_config.url).unwrap();
   let url = url.join(&command.path).unwrap();
+
+  match server_config.username {
+    Some(ref username) => { easy.username(username).unwrap() },
+    None => {}
+  }
+
+  match server_config.password {
+    Some(ref password) => { easy.password(password).unwrap() }
+    None => {}
+  }
+
   easy.custom_request(&command.method).unwrap();
   easy.url(url.as_str()).unwrap();
   easy.write_function(|data| {
