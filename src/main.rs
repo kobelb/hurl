@@ -1,6 +1,12 @@
+extern crate curl;
+extern crate url;
+
 use std::error::Error;
 use std::fmt;
-use std::io;
+use std::io::{self, Write};
+use url::{Url, ParseError};
+
+use curl::easy::Easy;
 
 #[derive(Debug)]
 struct Command {
@@ -41,5 +47,14 @@ fn parse(text: String) -> Result<Command, Box<Error>> {
 }
 
 fn evaluate(command: Command) {
-  println!("Gonna execute: {}", command);
+  let mut easy = Easy::new();
+  let url = Url::parse("http://localhost:9200").unwrap();
+  let url = url.join(&command.path).unwrap();
+  easy.url(url.as_str()).unwrap();
+  easy.write_function(|data| {
+      Ok(io::stdout().write(data).unwrap())
+  }).unwrap();
+  easy.perform().unwrap();
+
+  println!("{}", easy.response_code().unwrap());
 }

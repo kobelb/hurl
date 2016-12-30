@@ -12,3 +12,5 @@ default = []
 foo = []
 
 [dependencies]
+curl = "0.4.2"
+url = "1.2.4"
