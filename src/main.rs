@@ -1,9 +1,15 @@
 extern crate curl;
+extern crate termion;
 extern crate url;
 
 use std::error::Error;
 use std::fmt;
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
+use termion::clear;
+use termion::cursor;
+use termion::event::Key;
+use termion::input::TermRead;
+use termion::raw::IntoRawMode;
 use url::{Url};
 
 use curl::easy::Easy;
@@ -33,18 +39,46 @@ fn main() {
     password: None
   };
 
-  loop {
+  // loop {
     match read() {
       Ok(command) => { evaluate(&server_config, &command) }
       Err(err) => { println!("Unable to parse command: {}", err) }
     }
-  }
+  // }
 }
 
 fn read() -> Result<Command, Box<Error>> {
+  let mut stdin = io::stdin();
+  let mut stdout = try!(io::stdout().into_raw_mode());
+  try!(write!(stdout, "{}{}", clear::All, cursor::Goto(1,1)));
+  try!(stdout.flush());
+
+
+  let mut lines = 1;
   let mut buffer = String::new();
-   try!(io::stdin().read_line(&mut buffer));
-   parse(buffer)
+  for c in stdin.by_ref().keys() {
+    match c.unwrap() {
+        Key::F(5)      => break,
+        Key::Char(c)   => {
+          buffer.push(c);
+          try!(write!(stdout, "{}", c));
+          if c == '\n' {
+            lines += 1;
+            try!(write!(stdout, "{}", cursor::Goto(1, lines)));
+          }
+        },
+        Key::Alt(c)    => println!("Alt-{}", c),
+        Key::Ctrl('c')   => panic!("ciao"),
+        Key::Left      => println!("<left>"),
+        Key::Right     => println!("<right>"),
+        Key::Up        => println!("<up>"),
+        Key::Down      => println!("<down>"),
+        _              => println!("Other"),
+    }
+    try!(stdout.flush());  
+  }
+    
+  parse(buffer)
 }
 
 fn parse(text: String) -> Result<Command, Box<Error>> {

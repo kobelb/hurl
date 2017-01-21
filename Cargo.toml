@@ -13,4 +13,5 @@ foo = []
 
 [dependencies]
 curl = "0.4.2"
+termion = "1.0"
 url = "1.2.4"
