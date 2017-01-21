@@ -4,7 +4,7 @@ extern crate url;
 
 use std::error::Error;
 use std::fmt;
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 use termion::clear;
 use termion::cursor;
 use termion::event::Key;
@@ -48,33 +48,59 @@ fn main() {
 }
 
 fn read() -> Result<Command, Box<Error>> {
-    let mut stdin = io::stdin();
+    let stdin = io::stdin();
     let mut stdout = try!(io::stdout().into_raw_mode());
     try!(write!(stdout, "{}{}", clear::All, cursor::Goto(1, 1)));
     try!(stdout.flush());
 
 
-    let mut lines = 1;
+    let mut lines: Vec<u16> = vec![0];
+    let mut line: u16 = 0;
+    let mut column: u16 = 0;
     let mut buffer = String::new();
     for c in stdin.keys() {
         match c.unwrap() {
             Key::F(5) => break,
             Key::Char(c) => {
-                buffer.push(c);
                 try!(write!(stdout, "{}", c));
+                buffer.push(c);
+                
                 if c == '\n' {
-                    lines += 1;
-                    try!(write!(stdout, "{}", cursor::Goto(1, lines)));
+                    line += 1;
+                    lines.insert(line as usize, 0);
+                    column = 0;
+                } else {
+                    lines[line as usize] += 1;
+                    column += 1;
                 }
             }
-            Key::Alt(c) => println!("Alt-{}", c),
+            Key::Left => {
+                if column > 0 {
+                    column -= 1;
+                }
+            },
+            Key::Right => {
+                if column < lines[line as usize] {
+                    column += 1;
+                }
+            },
+            Key::Up => {
+                if line > 0 {
+                    line -= 1;
+                }
+            },
+            Key::Down => {
+                if (line as usize) < lines.len() - 1 {
+                    line += 1;
+                }
+                if column > lines[line as usize] {
+                    column = lines[line as usize];
+                }
+            },
             Key::Ctrl('c') => panic!("ciao"),
-            Key::Left => println!("<left>"),
-            Key::Right => println!("<right>"),
-            Key::Up => println!("<up>"),
-            Key::Down => println!("<down>"),
             _ => println!("Other"),
         }
+        try!(write!(stdout, "{}", cursor::Goto(column + 1, line + 1)));
         try!(stdout.flush());
     }
 
