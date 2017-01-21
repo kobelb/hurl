@@ -54,33 +54,34 @@ fn read() -> Result<Command, Box<Error>> {
     try!(stdout.flush());
 
 
-    let mut lines: Vec<u16> = vec![0];
-    let mut line: u16 = 0;
-    let mut column: u16 = 0;
-    let mut buffer = String::new();
+    let mut lines: Vec<String> = vec![String::new()];
+    let mut line: usize = 0;
+    let mut column: usize = 0;
+    
     for c in stdin.keys() {
         match c.unwrap() {
             Key::F(5) => break,
             Key::Char(c) => {
-                try!(write!(stdout, "{}", c));
-                buffer.push(c);
-                
+                let trailing: String = lines[line][column..].to_string();
                 if c == '\n' {
-                    line += 1;
-                    lines.insert(line as usize, 0);
+                    lines[line].truncate(column);
+                    line += 1; 
                     column = 0;
+                    try!(write!(stdout, "{}{}{}{}", clear::AfterCursor, c, cursor::Goto((column as u16) + 1, (line as u16) + 1), trailing));
+                    lines.insert(line, trailing);
                 } else {
-                    lines[line as usize] += 1;
+                    try!(write!(stdout, "{}{}{}", clear::AfterCursor, c, trailing));
+                    lines[line].insert(column, c);
                     column += 1;
                 }
-            }
+            },
             Key::Left => {
                 if column > 0 {
                     column -= 1;
                 }
             },
             Key::Right => {
-                if column < lines[line as usize] {
+                if column < lines[line].len() {
                     column += 1;
                 }
             },
@@ -90,21 +91,25 @@ fn read() -> Result<Command, Box<Error>> {
                 }
             },
             Key::Down => {
-                if (line as usize) < lines.len() - 1 {
+                if (line) < lines.len() - 1 {
                     line += 1;
-                }
-                if column > lines[line as usize] {
-                    column = lines[line as usize];
+
+                    let line_len = lines[line].len();
+                    if (column) > line_len {
+                        column = line_len;
+                    }
                 }
             },
             Key::Ctrl('c') => panic!("ciao"),
-            _ => println!("Other"),
+            _ => {},
         }
-        try!(write!(stdout, "{}", cursor::Goto(column + 1, line + 1)));
+        
+        try!(write!(stdout, "{}", cursor::Goto((column as u16) + 1, (line as u16) + 1)));
         try!(stdout.flush());
     }
-
-    parse(buffer)
+    let text = lines.join("\n");
+    try!(write!(stdout, "{}{}", cursor::Goto((column as u16) + 2, (line as u16) + 1), text));
+    parse(text)
 }
 
 fn parse(text: String) -> Result<Command, Box<Error>> {
