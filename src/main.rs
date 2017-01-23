@@ -47,6 +47,11 @@ fn main() {
     // }
 }
 
+struct Position {
+    line: usize,
+    column: usize
+}
+
 fn read() -> Result<Command, Box<Error>> {
     let stdin = io::stdin();
     let mut stdout = try!(io::stdout().into_raw_mode());
@@ -55,48 +60,47 @@ fn read() -> Result<Command, Box<Error>> {
 
 
     let mut lines: Vec<String> = vec![String::new()];
-    let mut line: usize = 0;
-    let mut column: usize = 0;
+    let mut position = Position{line: 0, column: 0};
     
     for c in stdin.keys() {
         match c.unwrap() {
             Key::F(5) => break,
             Key::Char(c) => {
-                let trailing: String = lines[line][column..].to_string();
+                let trailing: String = lines[position.line][position.column..].to_string();
                 if c == '\n' {
-                    lines[line].truncate(column);
-                    line += 1; 
-                    column = 0;
-                    try!(write!(stdout, "{}{}{}{}", clear::AfterCursor, c, cursor::Goto((column as u16) + 1, (line as u16) + 1), trailing));
-                    lines.insert(line, trailing);
+                    lines[position.line].truncate(position.column);
+                    position.line += 1; 
+                    position.column = 0;
+                    try!(write!(stdout, "{}{}{}{}", clear::AfterCursor, c, cursor::Goto((position.column as u16) + 1, (position.line as u16) + 1), trailing));
+                    lines.insert(position.line, trailing);
                 } else {
                     try!(write!(stdout, "{}{}{}", clear::AfterCursor, c, trailing));
-                    lines[line].insert(column, c);
-                    column += 1;
+                    lines[position.line].insert(position.column, c);
+                    position.column += 1;
                 }
             },
             Key::Left => {
-                if column > 0 {
-                    column -= 1;
+                if position.column > 0 {
+                    position.column -= 1;
                 }
             },
             Key::Right => {
-                if column < lines[line].len() {
-                    column += 1;
+                if position.column < lines[position.line].len() {
+                    position.column += 1;
                 }
             },
             Key::Up => {
-                if line > 0 {
-                    line -= 1;
+                if position.line > 0 {
+                    position.line -= 1;
                 }
             },
             Key::Down => {
-                if (line) < lines.len() - 1 {
-                    line += 1;
+                if (position.line) < lines.len() - 1 {
+                    position.line += 1;
 
-                    let line_len = lines[line].len();
-                    if (column) > line_len {
-                        column = line_len;
+                    let line_len = lines[position.line].len();
+                    if (position.column) > line_len {
+                        position.column = line_len;
                     }
                 }
             },
@@ -104,11 +108,11 @@ fn read() -> Result<Command, Box<Error>> {
             _ => {},
         }
         
-        try!(write!(stdout, "{}", cursor::Goto((column as u16) + 1, (line as u16) + 1)));
+        try!(write!(stdout, "{}", cursor::Goto((position.column as u16) + 1, (position.line as u16) + 1)));
         try!(stdout.flush());
     }
     let text = lines.join("\n");
-    try!(write!(stdout, "{}{}", cursor::Goto((column as u16) + 2, (line as u16) + 1), text));
+    try!(write!(stdout, "{}{}", cursor::Goto((position.column as u16) + 2, (position.line as u16) + 1), text));
     parse(text)
 }
 
